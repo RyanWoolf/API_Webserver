@@ -5,6 +5,8 @@ from marshmallow.exceptions import ValidationError
 
 
 class BookingSchema(ma.Schema):
+    customer = fields.Nested('CustomerSchema', exclude=['id', 'password', 'is_staff'])
+    
     class Meta:
-        fields = ('id', 'date', 'time', 'pax', 'comment')
+        fields = ('id', 'date', 'time', 'pax', 'comment', 'customer')
         ordered = True

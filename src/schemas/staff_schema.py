@@ -6,5 +6,5 @@ from marshmallow.exceptions import ValidationError
 
 class StaffSchema(ma.Schema):
     class Meta:
-        fields = ('id', 'staff_name', 'login_id', 'password', 'is_admin')
+        fields = ('id', 'staff_name', 'login_id', 'password', 'is_staff', 'is_admin')
         ordered = True

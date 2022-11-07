@@ -4,6 +4,11 @@ from config import db, bcrypt
 from datetime import date
 from models.staff import Staff
 from models.food import Food
+from models.customer import Customer
+from models.payment import Payment
+from models.table import Table
+from models.booking import Booking
+from datetime import date
 
 
 db_commands = Blueprint('db', __name__)
@@ -28,6 +33,9 @@ def seed_db():
             is_admin=True
         )
     ]
+    db.session.add_all(staffs)
+    db.session.commit()
+    
     foods = [
         Food(
             name = 'Steak Sandwich',
@@ -94,8 +102,52 @@ def seed_db():
             is_v = True
         )
     ]
-    db.session.add_all(staffs)
     db.session.add_all(foods)
     db.session.commit()
+        
+    payments = [
+        Payment(
+            method = "Cash"
+        ),
+        Payment(
+            method = "Credit Card"
+        ),
+        Payment(
+            method = "Prepaid"  
+        )
+    ]
+    db.session.add_all(payments)
+    db.session.commit()
+    
+    customer = [Customer(
+        first_name = "Ryan",
+        last_name = "Evans",
+        phone = "0468426279",
+        email = "test@test.com",
+        password = "lwhaus"
+    )]
+    db.session.add_all(customer)
+    db.session.commit()
+    
+    tables =[]
+    for i in range(1, 21):
+        table = Table(
+            number = i
+        )
+        tables.append(table)
+    db.session.add_all(tables)
+    db.session.commit()
+    
+    booking = Booking(
+        date = date.today(),
+        time = date.today(),
+        pax = 5,
+        comment = "Test only",
+        table = tables[3],
+        customer = customer[0]
+    )
+    db.session.add(booking)
+    db.session.commit()
+    
     
     print('Initial config seeded')

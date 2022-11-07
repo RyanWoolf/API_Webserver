@@ -6,6 +6,7 @@ from controllers.auth_controller import auth_bp
 from controllers.cli_controller import db_commands
 from controllers.auth_controller import auth_bp
 from controllers.customers_controller import customers_bp
+from controllers.bookings_controller import bookings_bp
 from marshmallow import ValidationError
 import os
 
@@ -32,8 +33,9 @@ def create_app():
         return {'error': f'The field {err} is required.'}, 400
     
     @app.errorhandler(ValidationError)
-    def key_error(err):
+    def validate_error(err):
         return {'error' : err.messages}, 400
+
 
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
     app.config['JWT_SECRET_KEY'] = os.environ.get('SECRET_KEY')
@@ -48,6 +50,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(db_commands)
     app.register_blueprint(foods_bp)
+    app.register_blueprint(bookings_bp)
 
 
     return app

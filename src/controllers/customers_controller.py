@@ -2,7 +2,7 @@ from flask import Blueprint, request, url_for, redirect
 from config import db
 from models.customer import Customer
 from schemas.customer_schema import CustomerSchema
-from controllers.auth_controller import authorization
+from controllers.auth_controller import authorization, authorization_admin
 from sqlalchemy.exc import IntegrityError
 from flask_jwt_extended import jwt_required
 
@@ -11,12 +11,14 @@ customers_bp = Blueprint('customers', __name__, url_prefix='/customers')
 
 
 def not_found(id):
-    return {'error': f'Customer id: {id} not found.'}, 404
+    return {'error': f'Customer {id} not found.'}, 404
 
 
 #Getting all customers from the db
 @customers_bp.route('/')
+@jwt_required()
 def all_customers():
+    authorization()
     stmt = db.select(Customer).order_by(Customer.id)
     customers = db.session.scalars(stmt)
     return CustomerSchema(many=True).dump(customers), 201
@@ -24,7 +26,9 @@ def all_customers():
     
 #Get specific customer with id
 @customers_bp.route('/<int:id>/')
+@jwt_required()
 def get_one_customer(id):
+    authorization()
     stmt = db.select(Customer).filter_by(id=id)
     customer = db.session.scalar(stmt)
     if customer:
@@ -34,70 +38,60 @@ def get_one_customer(id):
     
     
 #Get specific customer with a first name
-@customers_bp.route('/<string:tag>/')
-def search_food(tag):
-    if not tag.lower() in tags:
-        return {'error': 'Failed to search. Please check the tag and try again.'}, 404
+@customers_bp.route('/<string:f_name>/')
+@jwt_required()
+def search_customer(f_name):
+    authorization()
+    stmt = db.select(Customer).filter_by(first_name=f_name.capitalize())
+    customer = db.session.scalars(stmt)
+    # We can't guess the result is none or only one or more than one. 
+    # So use condition on len(result) to distinguish how many result could be returned
+    result = CustomerSchema(many=True).dump(customer)
+    if len(result) == 0:
+        return {'error': f'Customer {f_name} not found'}, 404
     else:
-        if tag.lower() == 'gf':
-            stmt = db.select(Food).filter_by(is_gf=True)
-            food = db.session.scalars(stmt)
-        elif tag.lower() == 'df':
-            stmt = db.select(Food).filter_by(is_df=True)
-            food = db.session.scalars(stmt)
-        elif tag.lower() == 'v':
-            stmt = db.select(Food).filter_by(is_v=True)
-            food = db.session.scalars(stmt)
-        return CustomerSchema(many=True, only=['name', 'price']).dump(food)
+        return result
 
 
-#Get specific foods with two tags(GF, DF, V)
-@customers_bp.route('/<string:tag1>/<string:tag2>')
-def search_food_tags(tag1, tag2):
-    tag1, tag2 = tag1.lower(), tag2.lower()
-    if tag1 not in tags or tag2 not in tags:
-        return {'error': 'Failed to search. Please check the tag and try again.'}, 404
-    elif tag1 == tag2: # If you put two same tags, it redirects to search_food
-        return redirect(url_for('foods.search_food', tag = tag1))
-    rest = list(tags)
-    rest.remove(tag1)
-    rest.remove(tag2)
-    if 'v' in rest:
-        stmt = db.select(Food).filter_by(is_gf=True, is_df=True)
-        food = db.session.scalars(stmt)
-    elif 'gf' in rest:
-        stmt = db.select(Food).filter_by(is_df=True, is_v=True)
-        food = db.session.scalars(stmt)
-    elif 'df' in rest:
-        stmt = db.select(Food).filter_by(is_v=True, is_gf=True)
-        food = db.session.scalars(stmt)
-    return CustomerSchema(many=True, only=['name', 'price']).dump(food)
+#Get specific customer with full name. first name/last name
+@customers_bp.route('/<string:f_name>/<string:l_name>')
+@jwt_required()
+def search_customer_fullname(f_name, l_name):
+    authorization()
+    stmt = db.select(Customer).filter_by(
+        first_name=f_name.capitalize(), 
+        last_name=l_name.capitalize())
+    customer = db.session.scalars(stmt) # there could be lots of customers with exactly same name
+    result = CustomerSchema(many=True).dump(customer)
+    if len(result) == 0:
+        return {'error': f'Customer {f_name} {l_name} not found'}, 404
+    else:
+        return result
 
 
 
-#Add new food in the DB, only admin is allowed to do this
+#Add new customer in the DB, only admin is allowed to do this
 @customers_bp.route('/', methods=['POST'])
-# @jwt_required()
-def add_food():
-    # authorization()
+@jwt_required()
+def add_customer():
+    authorization_admin()
     data = CustomerSchema().load(request.json)
-    food = Food(
-        name = data['name'],
-        price = data['price'],
-        is_gf = data.get('is_gf'),
-        is_df = data.get('is_df'),
-        is_v = data.get('is_v'),
+    customer = Customer(
+        first_name = data['first_name'].capitalize(),
+        last_name = data.get('last_name').capitalize(),
+        phone = data['phone'],
+        email = data.get('email')
     )
-    db.session.add(food)
+    db.session.add(customer)
     db.session.commit()
-    return CustomerSchema().dump(food), 201
+    return CustomerSchema().dump(customer), 201
 
 
 #Delete customer from the DB. For safety reasons, only accessible through id
 @customers_bp.route('/<int:id>/', methods = ['DELETE'])
-# @jwt_required()
+@jwt_required()
 def delete_one_customer(id):
-    # authorization()
+    authorization_admin()
     stmt = db.select(Customer).filter_by(id=id)
     customer = db.session.scalar(stmt)
     if customer:
@@ -110,9 +104,9 @@ def delete_one_customer(id):
 
 #Modify customer. Only accessible through id
 @customers_bp.route('/<int:id>/', methods = ['PUT', 'PATCH'])
-# @jwt_required()
+@jwt_required()
 def update_one_customer(id):
-    # authorization()
+    authorization_admin()
     stmt = db.select(Customer).filter_by(id=id)
     customer = db.session.scalar(stmt)
     if customer:

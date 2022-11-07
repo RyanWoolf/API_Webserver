@@ -2,7 +2,7 @@ from flask import Blueprint, request, url_for, redirect
 from config import db
 from models.food import Food
 from schemas.food_schema import FoodSchema
-from controllers.auth_controller import authorization
+from controllers.auth_controller import authorization_admin
 from sqlalchemy.exc import IntegrityError
 from flask_jwt_extended import jwt_required
 
@@ -74,9 +74,9 @@ def search_food_tags(tag1, tag2):
 
 #Add new food in the DB, only admin is allowed to do this
 @foods_bp.route('/', methods=['POST'])
-# @jwt_required()
+@jwt_required()
 def add_food():
-    # authorization()
+    authorization_admin()
     data = FoodSchema().load(request.json)
     food = Food(
         name = data['name'],
@@ -92,9 +92,9 @@ def add_food():
 
 #Delete food from the DB. For safety reasons, only accessible through id
 @foods_bp.route('/<int:id>/', methods = ['DELETE'])
-# @jwt_required()
+@jwt_required()
 def delete_one_food(id):
-    # authorization()
+    authorization_admin()
     stmt = db.select(Food).filter_by(id=id)
     food = db.session.scalar(stmt)
     if food:
@@ -107,9 +107,9 @@ def delete_one_food(id):
 
 #Modify food. Only accessible through id
 @foods_bp.route('/<int:id>/', methods = ['PUT', 'PATCH'])
-# @jwt_required()
+@jwt_required()
 def update_one_food(id):
-    # authorization()
+    authorization_admin()
     stmt = db.select(Food).filter_by(id=id)
     food = db.session.scalar(stmt)
     if food:

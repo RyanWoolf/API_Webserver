@@ -8,6 +8,9 @@ from models.customer import Customer
 from models.payment import Payment
 from models.table import Table
 from models.booking import Booking
+from models.payment import Payment
+from models.order import Order
+from models.order_food import Order_Food
 from datetime import date
 
 
@@ -26,11 +29,25 @@ def drop_db():
 
 @db_commands.cli.command('seed')
 def seed_db():
+    payments = [
+        Payment(
+            method = 'Cash'
+        ),
+        Payment(
+            method = 'Card'
+        ),
+        Payment(
+            method = 'Prepaid'
+        )
+    ]
+    db.session.add_all(payments)
+    db.session.commit()
+    
     staffs = [
         Staff(
-            login_id='admin',
-            password=bcrypt.generate_password_hash('lwhaus').decode('utf-8'),
-            is_admin=True
+            login_id = 'admin',
+            password = bcrypt.generate_password_hash('lwhaus').decode('utf-8'),
+            is_admin = True
         )
     ]
     db.session.add_all(staffs)
@@ -119,12 +136,13 @@ def seed_db():
     db.session.add_all(payments)
     db.session.commit()
     
-    customer = [Customer(
+    customer = [
+        Customer(
         first_name = "Ryan",
         last_name = "Evans",
         phone = "0468426279",
         email = "test@test.com",
-        password = "lwhaus"
+        password = bcrypt.generate_password_hash('lwhaus').decode('utf-8'),
     )]
     db.session.add_all(customer)
     db.session.commit()
@@ -132,7 +150,8 @@ def seed_db():
     tables =[]
     for i in range(1, 21):
         table = Table(
-            number = i
+            number = i,
+            seats = 4 if i < 16 else 8
         )
         tables.append(table)
     db.session.add_all(tables)
@@ -141,13 +160,38 @@ def seed_db():
     booking = Booking(
         date = date.today(),
         time = date.today(),
-        pax = 5,
+        pax = 4,
         comment = "Test only",
         table = tables[3],
         customer = customer[0]
     )
     db.session.add(booking)
     db.session.commit()
+    
+    # order1 = Order(
+    #         staff = 1,
+    #         table = 4
+    #     )
+   
+    order1 = Order(
+            staff = staffs[0],
+            table = tables[1]
+        )
+    # item2 = [('Steak Sandwich', 4), ('Prawn Pasta', 1)]
+    db.session.add(order1)
+    db.session.commit()
+    
+    # order_foods = Order_Food(
+    #     order = order2.id,
+    #     food = foods[0],
+    #     quantity = foods[0]
+    # )
+    # db.session.add(order_foods)
+    # db.session.commit()
+    item1 = [(foods[0], 3), (foods[2], 2)]
+    order1.add_foods(item1)
+    db.session.commit()
+    # order2.add_foods(item2)
     
     
     print('Initial config seeded')

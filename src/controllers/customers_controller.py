@@ -69,7 +69,6 @@ def search_customer_fullname(f_name, l_name):
         return result
 
 
-
 #Add new customer in the DB, only admin is allowed to do this
 @customers_bp.route('/', methods=['POST'])
 @jwt_required()

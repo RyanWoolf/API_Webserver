@@ -4,7 +4,10 @@ from marshmallow.validate import Length, OneOf, And, Regexp
 from marshmallow.exceptions import ValidationError
 
 
-class BookingSchema(ma.Schema):
+class OrderSchema(ma.Schema):
+    table = fields.Nested('TableSchema', only=['number'])
+    staff = fields.Nested('StaffSchema', only=['id', 'first_name'])
+    
     class Meta:
-        fields = ('id', 'total_price', 'is_paid')
+        fields = ('id', 'table', 'staff', 'total_price', 'is_paid', 'table', 'staff')
         ordered = True

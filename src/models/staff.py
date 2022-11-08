@@ -8,5 +8,6 @@ class Staff(db.Model):
     staff_name = db.Column(db.String())
     login_id = db.Column(db.String(), unique=True, nullable=False)
     password = db.Column(db.String(), nullable=False)
-    is_staff = db.Column(db.Boolean(), default=True)
     is_admin = db.Column(db.Boolean(), default=False)
+    
+    orders = db.relationship('Order', back_populates='staff')

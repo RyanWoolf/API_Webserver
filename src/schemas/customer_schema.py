@@ -1,6 +1,6 @@
 from config import ma
 from marshmallow import fields, validates
-from marshmallow.validate import Length, OneOf, And, Regexp, Email
+from marshmallow.validate import Length, Range, And, Regexp, Email
 from marshmallow.exceptions import ValidationError
 
 
@@ -14,6 +14,6 @@ class CustomerSchema(ma.Schema):
         validate=Email(error="Must be valid email address"))
 
     class Meta:
-        fields = ('id', 'email', 'password', 'first_name', 'last_name', 'phone', 'is_staff', 'visited')
+        fields = ('id', 'email', 'password', 'first_name', 'last_name', 'phone', 'visited')
         ordered = True
         

@@ -6,5 +6,7 @@ class Table(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     number = db.Column(db.Integer, nullable=False)
+    seats = db.Column(db.Integer, nullable=False)
     
     bookings = db.relationship('Booking', back_populates="table")
+    orders = db.relationship('Order', back_populates='table')

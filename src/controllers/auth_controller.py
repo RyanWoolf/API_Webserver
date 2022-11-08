@@ -15,7 +15,7 @@ def authorization(): # check again please
     stmt = db.select(Staff).filter_by(id=staff_id)
     staff = db.session.scalar(stmt)
     if not staff.is_staff:
-        abort(401)
+        abort(401, description='Only staff members allowed')
         
 # Check if you're an admin
 def authorization_admin():
@@ -23,7 +23,7 @@ def authorization_admin():
     stmt = db.select(Staff).filter_by(id=staff_id)
     staff = db.session.scalar(stmt)
     if not staff.is_admin:
-        abort(401)
+        abort(401, description='Only admins allowed')
 
 
 #Login staff section
@@ -33,7 +33,7 @@ def auth_login():
     staff = db.session.scalar(stmt)
     if staff and bcrypt.check_password_hash(staff.password, request.json['password']):
         token = create_access_token(identity=str(staff.id), expires_delta=timedelta(days=1))
-        return {'login_id': staff.login_id, 'token': token}, 200
+        return {'login_id': staff.login_id, 'token': token}, 200 # for testing purpose only. Should be proper welcome page irl
     else:
         return {'error': 'Invalid name or password'}, 401
 

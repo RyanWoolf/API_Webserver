@@ -5,6 +5,8 @@ from marshmallow.exceptions import ValidationError
 
 
 class StaffSchema(ma.Schema):
+    orders = fields.Nested('OrderSchema', only=['id'])
+    
     class Meta:
-        fields = ('id', 'staff_name', 'login_id', 'password', 'is_staff', 'is_admin')
+        fields = ('id', 'staff_name', 'login_id', 'password', 'is_admin', 'orders')
         ordered = True

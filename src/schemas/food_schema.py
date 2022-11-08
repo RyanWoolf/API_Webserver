@@ -5,6 +5,8 @@ from marshmallow.exceptions import ValidationError
 
 
 class FoodSchema(ma.Schema):
+    orders = fields.Nested('OrderSchema', only=['id'])
+    
     class Meta:
-        fields = ('id', 'name', 'price', 'is_gf', 'is_df', 'is_v')
+        fields = ('id', 'name', 'price', 'is_gf', 'is_df', 'is_v', 'orders')
         ordered = True

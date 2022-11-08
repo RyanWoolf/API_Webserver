@@ -1,7 +1,5 @@
-from email.policy import default
 from config import db
-
-
+from sqlalchemy.orm import backref, relationship
 
 class Food(db.Model):
     __tablename__ = 'foods'
@@ -12,3 +10,7 @@ class Food(db.Model):
     is_gf = db.Column(db.Boolean, default=False)
     is_df = db.Column(db.Boolean, default=False)
     is_v = db.Column(db.Boolean, default=False)
+    
+    orders = relationship('Order', secondary='order_food', viewonly=True)
+    # order_detail = db.relationship('Order_detail', back_populates='food')
+    

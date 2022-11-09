@@ -1,17 +1,14 @@
-from flask import Blueprint, request, url_for, redirect
-from config import db
+from flask import Blueprint, request
+from config import db, bcrypt, query_by_id, not_found
 from models.customer import Customer
 from schemas.customer_schema import CustomerSchema
 from controllers.auth_controller import authorization, authorization_admin
 from sqlalchemy.exc import IntegrityError
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, create_access_token
+from datetime import timedelta
 
 
 customers_bp = Blueprint('customers', __name__, url_prefix='/customers')
-
-
-def not_found(id):
-    return {'error': f'Customer {id} not found.'}, 404
 
 
 #Getting all customers from the db
@@ -29,12 +26,11 @@ def all_customers():
 @jwt_required()
 def get_one_customer(id):
     authorization()
-    stmt = db.select(Customer).filter_by(id=id)
-    customer = db.session.scalar(stmt)
+    customer = query_by_id(Customer, id)
     if customer:
         return CustomerSchema().dump(customer)
     else:
-        return not_found(id)
+        return not_found('Customer', id)
     
     
 #Get specific customer with a first name
@@ -43,10 +39,10 @@ def get_one_customer(id):
 def search_customer(f_name):
     authorization()
     stmt = db.select(Customer).filter_by(first_name=f_name.capitalize())
-    customer = db.session.scalars(stmt)
+    customers = db.session.scalars(stmt)
     # We can't guess the result is none or only one or more than one. 
     # So use condition on len(result) to distinguish how many result could be returned
-    result = CustomerSchema(many=True).dump(customer)
+    result = CustomerSchema(many=True).dump(customers)
     if len(result) == 0:
         return {'error': f'Customer {f_name} not found'}, 404
     else:
@@ -61,29 +57,44 @@ def search_customer_fullname(f_name, l_name):
     stmt = db.select(Customer).filter_by(
         first_name=f_name.capitalize(), 
         last_name=l_name.capitalize())
-    customer = db.session.scalars(stmt) # there could be lots of customers with exactly same name
-    result = CustomerSchema(many=True).dump(customer)
+    customers = db.session.scalars(stmt) # there could be lots of customers with exactly same name
+    result = CustomerSchema(many=True).dump(customers)
     if len(result) == 0:
         return {'error': f'Customer {f_name} {l_name} not found'}, 404
     else:
         return result
 
 
-#Add new customer in the DB, only admin is allowed to do this
-@customers_bp.route('/', methods=['POST'])
-@jwt_required()
-def add_customer():
-    authorization_admin()
-    data = CustomerSchema().load(request.json)
-    customer = Customer(
-        first_name = data['first_name'].capitalize(),
-        last_name = data.get('last_name').capitalize(),
-        phone = data['phone'],
-        email = data.get('email')
-    )
-    db.session.add(customer)
-    db.session.commit()
-    return CustomerSchema().dump(customer), 201
+#New customer join through here
+@customers_bp.route('/join', methods=['POST'])
+def customer_join():
+    try:
+        data = CustomerSchema().load(request.json)
+        customer = Customer(
+            email = data['email'],
+            password = bcrypt.generate_password_hash(data['password']).decode('utf-8'),
+            first_name = data['first_name'].capitalize(),
+            last_name = data.get('last_name').capitalize(),
+            phone = data['phone']
+        )
+        db.session.add(customer)
+        db.session.commit()
+        token = create_access_token(identity=str(customer.id), expires_delta=timedelta(days=1))
+        return {'msg': f'{customer.email} registered. Welcome {customer.first_name}.', 'token': f'{token}'}, 201
+    except IntegrityError:
+        return {'error': 'Email is already in use. Please try with a different email address'}, 409
+
+
+# Customer login through here
+@customers_bp.route('/login/', methods=['POST'])
+def customer_login():
+    stmt = db.select(Customer).filter_by(email=request.json['email'])
+    customer = db.session.scalar(stmt)
+    if customer and bcrypt.check_password_hash(customer.password, request.json['password']):
+        token = create_access_token(identity=str(customer.id), expires_delta=timedelta(days=1))
+        return {'email': customer.email, 'token': token}, 200 # for testing purpose only. Should be proper welcome page irl
+    else:
+        return {'error': 'Invalid email or password'}, 401
 
 
 #Delete customer from the DB. For safety reasons, only accessible through id
@@ -91,14 +102,13 @@ def add_customer():
 @jwt_required()
 def delete_one_customer(id):
     authorization_admin()
-    stmt = db.select(Customer).filter_by(id=id)
-    customer = db.session.scalar(stmt)
+    customer = query_by_id(Customer, id)
     if customer:
         db.session.delete(customer)
         db.session.commit()
         return {'msg': f'Customer id:{id} {customer.first_name} {customer.last_name} deleted successfully'}
     else:
-        return not_found(id)
+        return not_found('Customer', id)
 
 
 #Modify customer. Only accessible through id
@@ -106,8 +116,7 @@ def delete_one_customer(id):
 @jwt_required()
 def update_one_customer(id):
     authorization_admin()
-    stmt = db.select(Customer).filter_by(id=id)
-    customer = db.session.scalar(stmt)
+    customer = query_by_id(Customer, id)
     if customer:
         customer.first_name = request.json.get('first_name') or customer.first_name
         customer.last_name = request.json.get('last_name') or customer.last_name
@@ -117,4 +126,4 @@ def update_one_customer(id):
         db.session.commit()
         return CustomerSchema().dump(customer)
     else:
-        return not_found(id)
+        return not_found('Customer', id)

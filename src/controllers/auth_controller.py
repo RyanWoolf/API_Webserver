@@ -1,5 +1,5 @@
 from flask import Blueprint, request, abort
-from config import db, bcrypt
+from config import db, bcrypt, query_by_id
 from datetime import timedelta
 from models.staff import Staff
 from schemas.staff_schema import StaffSchema
@@ -9,19 +9,23 @@ from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_requir
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
+
+# CHeck if you're a customer
+def is_customer():
+    id = get_jwt_identity()
+    if int(id) < 100:
+        return abort(401, description='No Access to customer page.')
+
 # Check if you're a staff
 def authorization(): # check again please
     staff_id = get_jwt_identity()
-    stmt = db.select(Staff).filter_by(id=staff_id)
-    staff = db.session.scalar(stmt)
-    if not staff.is_staff:
+    if int(staff_id) > 100:
         abort(401, description='Only staff members allowed')
         
 # Check if you're an admin
 def authorization_admin():
     staff_id = get_jwt_identity()
-    stmt = db.select(Staff).filter_by(id=staff_id)
-    staff = db.session.scalar(stmt)
+    staff = query_by_id(Staff, staff_id)
     if not staff.is_admin:
         abort(401, description='Only admins allowed')
 
@@ -45,13 +49,14 @@ def auth_register():
         staff = Staff(
             login_id=request.json['login_id'],
             password=bcrypt.generate_password_hash(request.json['password']).decode('utf-8'),
-            name=request.json.get('name')
+            staff_name=request.json.get('staff_name')
         )
         db.session.add(staff)
         db.session.commit()
-        return StaffSchema(exclude=['password']).dump(staff), 201
+        token = create_access_token(identity=str(staff.id), expires_delta=timedelta(days=1))
+        return {'msg': f'Login ID: {staff.login_id} registered.', 'token': f'{token}'}, 201
     except IntegrityError:
-        return {'error': 'Login id already in use'}, 409
+        return {'error': 'Login Id already in use. Please try again.'}, 409
     
     
 #List all staff
@@ -59,6 +64,6 @@ def auth_register():
 @jwt_required()
 def get_staffs():
     authorization_admin()
-    stmt = db.select(Staff)
+    stmt = db.select(Staff).order_by(Staff.id)
     users = db.session.scalars(stmt)
     return StaffSchema(many=True, exclude=['password']).dump(users)

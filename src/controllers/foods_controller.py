@@ -1,9 +1,8 @@
 from flask import Blueprint, request, url_for, redirect
-from config import db
+from config import db, query_by_id, not_found
 from models.food import Food
 from schemas.food_schema import FoodSchema
 from controllers.auth_controller import authorization_admin
-from sqlalchemy.exc import IntegrityError
 from flask_jwt_extended import jwt_required
 
 
@@ -22,15 +21,14 @@ def all_foods():
 #Get specific food with id
 @foods_bp.route('/<int:id>/')
 def get_one_food(id):
-    stmt = db.select(Food).filter_by(id=id)
-    food = db.session.scalar(stmt)
+    food = query_by_id(Food, id)
     if food:
         return FoodSchema().dump(food)
     else:
-        return {'error': f'Food id: {id} not found.'}, 404
+        return not_found('Food', id)
     
     
-#Get specific foods with a tag(GF, DF, V)
+#search foods with a tag(GF, DF, V)
 @foods_bp.route('/<string:tag>/')
 def search_food(tag):
     if not tag.lower() in tags:
@@ -48,7 +46,7 @@ def search_food(tag):
         return FoodSchema(many=True, only=['name', 'price']).dump(food)
 
 
-#Get specific foods with two tags(GF, DF, V)
+#search foods with two tags(GF, DF, V)
 @foods_bp.route('/<string:tag1>/<string:tag2>')
 def search_food_tags(tag1, tag2):
     tag1, tag2 = tag1.lower(), tag2.lower()
@@ -69,7 +67,6 @@ def search_food_tags(tag1, tag2):
         stmt = db.select(Food).filter_by(is_v=True, is_gf=True)
         food = db.session.scalars(stmt)
     return FoodSchema(many=True, only=['name', 'price']).dump(food)
-
 
 
 #Add new food in the DB, only admin is allowed to do this
@@ -95,14 +92,13 @@ def add_food():
 @jwt_required()
 def delete_one_food(id):
     authorization_admin()
-    stmt = db.select(Food).filter_by(id=id)
-    food = db.session.scalar(stmt)
+    food = query_by_id(Food, id)
     if food:
         db.session.delete(food)
         db.session.commit()
         return {'msg': f'Food {food.name} deleted successfully'}
     else:
-        return {'error': f'Food id: {id} not found.'}, 404
+        return not_found('Food', id)
 
 
 #Modify food. Only accessible through id
@@ -110,8 +106,7 @@ def delete_one_food(id):
 @jwt_required()
 def update_one_food(id):
     authorization_admin()
-    stmt = db.select(Food).filter_by(id=id)
-    food = db.session.scalar(stmt)
+    food = query_by_id(Food, id)
     if food:
         food.name = request.json.get('name') or food.name
         food.price = request.json.get('price') or food.price
@@ -121,4 +116,4 @@ def update_one_food(id):
         db.session.commit()
         return FoodSchema().dump(food)
     else:
-        return {'error': f'Food id: {id} not found.'}, 404
+        return not_found('Food', id)

@@ -6,8 +6,8 @@ from marshmallow.exceptions import ValidationError
 
 class OrderSchema(ma.Schema):
     table = fields.Nested('TableSchema', only=['number'])
-    staff = fields.Nested('StaffSchema', only=['id', 'first_name'])
+    staff = fields.Nested('StaffSchema', only=['id', 'staff_name'])
     
     class Meta:
-        fields = ('id', 'table', 'staff', 'total_price', 'is_paid', 'table', 'staff')
+        fields = ('id', 'date', 'table', 'staff', 'total_price', 'is_paid')
         ordered = True

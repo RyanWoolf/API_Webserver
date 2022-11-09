@@ -1,5 +1,4 @@
 from flask import Blueprint
-from flask_jwt_extended import jwt_required
 from config import db, bcrypt
 from datetime import date
 from models.staff import Staff
@@ -20,15 +19,27 @@ db_commands = Blueprint('db', __name__)
 @db_commands.cli.command('create')
 def create_db():
     db.create_all()
-    print("Initial config created")
+    print("Initial tables created")
 
 @db_commands.cli.command('drop')
 def drop_db():
     db.drop_all()
-    print("Initial config dropped")
+    print("Initial tables dropped")
 
 @db_commands.cli.command('seed')
 def seed_db():
+    # Admin account setup
+    staffs = [
+        Staff(
+            login_id = 'admin',
+            password = bcrypt.generate_password_hash('lwhaus').decode('utf-8'),
+            is_admin = True
+        )
+    ]
+    db.session.add_all(staffs)
+    db.session.commit()    
+    
+    # Payment methods setup
     payments = [
         Payment(
             method = 'Cash'
@@ -43,16 +54,18 @@ def seed_db():
     db.session.add_all(payments)
     db.session.commit()
     
-    staffs = [
-        Staff(
-            login_id = 'admin',
-            password = bcrypt.generate_password_hash('lwhaus').decode('utf-8'),
-            is_admin = True
+    # Initial tables setup
+    tables =[]
+    for i in range(1, 21):
+        table = Table(
+            number = i,
+            seats = 4 if i < 16 else 8
         )
-    ]
-    db.session.add_all(staffs)
+        tables.append(table)
+    db.session.add_all(tables)
     db.session.commit()
     
+    # Initial food menu setup
     foods = [
         Food(
             name = 'Steak Sandwich',
@@ -121,21 +134,8 @@ def seed_db():
     ]
     db.session.add_all(foods)
     db.session.commit()
-        
-    payments = [
-        Payment(
-            method = "Cash"
-        ),
-        Payment(
-            method = "Credit Card"
-        ),
-        Payment(
-            method = "Prepaid"  
-        )
-    ]
-    db.session.add_all(payments)
-    db.session.commit()
     
+    # Dummy customer setup
     customer = [
         Customer(
         first_name = "Ryan",
@@ -147,16 +147,7 @@ def seed_db():
     db.session.add_all(customer)
     db.session.commit()
     
-    tables =[]
-    for i in range(1, 21):
-        table = Table(
-            number = i,
-            seats = 4 if i < 16 else 8
-        )
-        tables.append(table)
-    db.session.add_all(tables)
-    db.session.commit()
-    
+    # Dummy booking setup
     booking = Booking(
         date = date.today(),
         time = date.today(),
@@ -167,31 +158,19 @@ def seed_db():
     )
     db.session.add(booking)
     db.session.commit()
-    
-    # order1 = Order(
-    #         staff = 1,
-    #         table = 4
-    #     )
-   
-    order1 = Order(
+
+    # Dummy order and association table setup
+    order = Order(
             staff = staffs[0],
-            table = tables[1]
+            table = tables[1],
+            date = date.today()
         )
-    # item2 = [('Steak Sandwich', 4), ('Prawn Pasta', 1)]
-    db.session.add(order1)
+    db.session.add(order)
     db.session.commit()
-    
-    # order_foods = Order_Food(
-    #     order = order2.id,
-    #     food = foods[0],
-    #     quantity = foods[0]
-    # )
-    # db.session.add(order_foods)
-    # db.session.commit()
-    item1 = [(foods[0], 3), (foods[2], 2)]
-    order1.add_foods(item1)
+    item = [(foods[0], 3), (foods[2], 2)]
+    order.generate_order_food(item)
+    order.calc_total_price(item)
     db.session.commit()
-    # order2.add_foods(item2)
+
     
-    
-    print('Initial config seeded')
+    print('Initial tables seeded')

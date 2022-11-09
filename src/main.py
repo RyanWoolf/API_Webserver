@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, abort
 from config import db, ma, bcrypt, jwt
 # from controllers.cards_controller import cards_bp
 from controllers.foods_controller import foods_bp
@@ -7,7 +7,9 @@ from controllers.cli_controller import db_commands
 from controllers.auth_controller import auth_bp
 from controllers.customers_controller import customers_bp
 from controllers.bookings_controller import bookings_bp
+from controllers.orders_controller import orders_bp
 from marshmallow import ValidationError
+from sqlalchemy.exc import IntegrityError
 import os
 
 
@@ -35,6 +37,10 @@ def create_app():
     @app.errorhandler(ValidationError)
     def validate_error(err):
         return {'error' : err.messages}, 400
+    
+    # @app.errorhandler(AttributeError)
+    # def attribute_error(err):
+    #     return {'error' : 'Attribute error..'}, 400
 
 
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
@@ -50,6 +56,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(db_commands)
     app.register_blueprint(foods_bp)
+    app.register_blueprint(orders_bp)
     app.register_blueprint(bookings_bp)
 
 

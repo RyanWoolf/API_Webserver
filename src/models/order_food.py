@@ -13,8 +13,9 @@ class Order_Food(db.Model):
     quantity = db.Column(db.Integer, nullable=False)
     
     
-    order = relationship('Order', backref=backref('order_food'))
-    food = relationship('Food', backref=backref('order_food'))
+    order = relationship('Order', backref=backref('order_food', cascade="all, delete-orphan"))
+    food = relationship('Food', backref=backref('order_food', cascade="all, delete-orphan"))
+    
     
     def __init__(self, order=None, food=None, quantity=None):
         self.id = uuid.uuid4().hex

@@ -1,7 +1,6 @@
 from config import ma
-from marshmallow import fields, validates
-from marshmallow.validate import Length, Range, And, Regexp, Email
-from marshmallow.exceptions import ValidationError
+from marshmallow import fields
+from marshmallow.validate import Length, And, Regexp, Email
 
 
 class CustomerSchema(ma.Schema):

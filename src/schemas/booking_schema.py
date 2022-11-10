@@ -1,7 +1,6 @@
-from config import ma, db
-from marshmallow import fields, validates
-from marshmallow.validate import Range, OneOf, And, Regexp
-from marshmallow.exceptions import ValidationError
+from config import ma
+from marshmallow import fields
+from marshmallow.validate import Range
 
 
 class BookingSchema(ma.Schema):

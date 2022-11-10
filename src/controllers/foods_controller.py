@@ -15,7 +15,6 @@ tags = ('gf', 'df', 'v')
 def all_foods():
     stmt = db.select(Food).order_by(Food.id)
     foods = db.session.scalars(stmt)
-    # print(FoodSchema(many=True).dump(foods))
     return FoodSchema(many=True).dump(foods), 201
     
     

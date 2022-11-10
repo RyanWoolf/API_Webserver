@@ -1,7 +1,8 @@
 from config import db
 from models.order_food import Order_Food
 from models.food import Food
-from sqlalchemy.orm import backref, relationship
+from sqlalchemy.orm import relationship
+
 
 class Order(db.Model):
     __tablename__ = 'orders'
@@ -13,9 +14,12 @@ class Order(db.Model):
     
     staff_id = db.Column(db.Integer, db.ForeignKey('staffs.id'), nullable=False)
     table_id = db.Column(db.Integer, db.ForeignKey('tables.id'), nullable=False)
+
     
     staff = db.relationship('Staff', back_populates='orders')
     table = db.relationship('Table', back_populates='orders')
+    receipt = db.relationship('Receipt', back_populates='orders', uselist=False, cascade='all, delete')
+ 
     
     food = relationship('Food', secondary='order_food', viewonly=True)
     

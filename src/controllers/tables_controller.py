@@ -10,7 +10,6 @@ from sqlalchemy.exc import IntegrityError, DataError
 tables_bp = Blueprint('tables', __name__, url_prefix='/tables')
 
 
-
 def table_number(number):
     stmt = db.select(Table).filter_by(number=number)
     table = db.session.scalar(stmt)

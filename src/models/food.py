@@ -1,5 +1,5 @@
 from config import db
-from sqlalchemy.orm import backref, relationship
+from sqlalchemy.orm import relationship
 
 class Food(db.Model):
     __tablename__ = 'foods'
@@ -12,5 +12,4 @@ class Food(db.Model):
     is_v = db.Column(db.Boolean, default=False)
     
     orders = relationship('Order', secondary='order_food', viewonly=True)
-    # order_detail = db.relationship('Order_detail', back_populates='food')
     

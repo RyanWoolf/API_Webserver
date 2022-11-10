@@ -37,7 +37,7 @@ def auth_login():
     staff = db.session.scalar(stmt)
     if staff and bcrypt.check_password_hash(staff.password, request.json['password']):
         token = create_access_token(identity=str(staff.id), expires_delta=timedelta(days=1))
-        return {'login_id': staff.login_id, 'token': token}, 200 # for testing purpose only. Should be proper welcome page irl
+        return {'login_id': staff.login_id, 'token': token}, 200 
     else:
         return {'error': 'Invalid name or password'}, 401
 

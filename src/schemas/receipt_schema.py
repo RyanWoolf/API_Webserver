@@ -1,10 +1,11 @@
 from config import ma, db
-from marshmallow import fields, validates
-from marshmallow.validate import Length, OneOf, And, Regexp
-from marshmallow.exceptions import ValidationError
+from marshmallow import fields
 
 
 class ReceiptSchema(ma.Schema):
+    payments = fields.Nested('PaymentSchema', only=['method'])
+    orders = fields.Nested('OrderSchema', only=['id', 'total_price'])
+    
     class Meta:
-        fields = ('id')
+        fields = ('id', 'payments', 'orders')
         ordered = True

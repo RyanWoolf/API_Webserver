@@ -2,7 +2,6 @@ from flask import Blueprint, request, abort
 from config import db, query_by_id, not_found_simple, not_found
 from models.customer import Customer
 from models.booking import Booking
-# from schemas.customer_schema import CustomerSchema
 from schemas.booking_schema import BookingSchema
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from controllers.auth_controller import authorization, is_customer, authorization_admin
@@ -164,3 +163,16 @@ def update_one_customer(id):
         return BookingSchema().dump(booking)
     else:
         return not_found('Booking', id)
+    
+    
+## Delete a booking
+@bookings_bp.route('/<int:id>/', methods=['DELETE'])
+@jwt_required()
+def delete_booking(id):
+    authorization_admin()
+    booking = query_by_id(Booking, id)
+    if booking:
+        db.session.delete(booking)
+        db.session.commit()
+        return {'msg': f'Booking ID {id} deleted successfully'}, 200
+    return not_found('Booking', id)

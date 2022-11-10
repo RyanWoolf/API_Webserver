@@ -1,10 +1,17 @@
 from config import ma, db
-from marshmallow import fields, validates
-from marshmallow.validate import Length, OneOf, And, Regexp
-from marshmallow.exceptions import ValidationError
+from marshmallow import fields
+from marshmallow.validate import OneOf
 
 
-class BookingSchema(ma.Schema):
+VALID_PAYMENT = ['Card', 'Cash', 'Prepaid']
+
+class myString(fields.String):
+    default_error_messages={"invalid": "It must be a string.", "invalid_utf8": "Not a valid utf-8 string."}
+    
+
+class PaymentSchema(ma.Schema):
+    method = myString(validate=OneOf(VALID_PAYMENT, error=f'It must be one of {VALID_PAYMENT}.'))
+    
     class Meta:
         fields = ('id', 'method')
         ordered = True

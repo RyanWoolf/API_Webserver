@@ -1,7 +1,6 @@
 from config import ma
-from marshmallow import fields, validates
-from marshmallow.validate import Range, NoneOf, And, Regexp
-from sqlalchemy.exc import IntegrityError
+from marshmallow import fields
+from marshmallow.validate import Range
 
 
 class TableSchema(ma.Schema):

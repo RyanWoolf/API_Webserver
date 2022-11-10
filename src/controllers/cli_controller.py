@@ -9,7 +9,8 @@ from models.table import Table
 from models.booking import Booking
 from models.payment import Payment
 from models.order import Order
-from models.order_food import Order_Food
+from models.receipt import Receipt
+from models.order_food import Order_Food ## Need this for seeding
 from datetime import date
 
 
@@ -166,6 +167,11 @@ def seed_db():
             date = date.today()
         )
     db.session.add(order)
+    db.session.commit()
+    receipt = Receipt(
+        orders = order,
+        payments = payments[1])
+    db.session.add(receipt)
     db.session.commit()
     item = [(foods[0], 3), (foods[2], 2)]
     order.generate_order_food(item)

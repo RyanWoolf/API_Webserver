@@ -24,12 +24,9 @@ def all_orders():
     authorization()
     stmt = db.select(Order).order_by(Order.id)
     orders = db.session.scalars(stmt)
-    print(orders)
-    # print(OrderSchema(many=True).dump(orders))
     return OrderSchema(many=True).dump(orders), 201
-# OrderSchema(many=True).dump(orders)
-# {'msg': 'successfully'} 
-    
+
+
     
 #Get an order with id
 @orders_bp.route('/<int:id>/')
@@ -77,8 +74,7 @@ def search_orders_date(year, month, day):
 @jwt_required()
 def delete_one_order(id):
     authorization_admin()
-    stmt = db.select(Order).filter_by(id=id)
-    order = db.session.scalar(stmt)
+    order = query_by_id(Order, id)
     if order:
         db.session.delete(order)
         db.session.commit()
@@ -99,19 +95,28 @@ def update_order(id):
         staff = request.json.get('staff')
         table = request.json.get('table')
         if staff:
+            if not isinstance(staff, int):
+                return {'error': 'Staff id must be integer'}, 400
             staff_new = query_by_id(Staff, staff)
             if not staff_new:
                 return not_found_simple('Staff')
             order.staff = staff_new
         if table:
-            table_new = query_by_id(Table, table)
-            order.table = table_new
+            if not isinstance(table, int):
+                return {'error': 'Table number must be integer'}, 400
+            stmt_table = db.select(Table).filter_by(number=table)
+            table_new = db.session.scalar(stmt_table)
+            order.table = table_new.id
         food = request.json.get('food')
         if food:
+            if not isinstance(food, int):
+                return {'error': 'Food id must be integer'}, 400
             stmt = db.select(Order_Food).filter_by(order_id=id, food_id=food)
             food_current = db.session.scalar(stmt)
             if food_current:
                 qty_new = request.json.get('quantity')
+                if not isinstance(qty_new, int):
+                    return {'error': 'Quantity number must be integer'}, 400
                 food_new = query_by_id(Food, food)
                 qty_before = food_current.quantity
                 db.session.query(Order_Food).filter(

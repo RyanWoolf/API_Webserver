@@ -15,6 +15,7 @@ tags = ('gf', 'df', 'v')
 def all_foods():
     stmt = db.select(Food).order_by(Food.id)
     foods = db.session.scalars(stmt)
+    # print(FoodSchema(many=True).dump(foods))
     return FoodSchema(many=True).dump(foods), 201
     
     
@@ -107,12 +108,13 @@ def delete_one_food(id):
 def update_one_food(id):
     authorization_admin()
     food = query_by_id(Food, id)
+    data = FoodSchema().load(request.json)
     if food:
-        food.name = request.json.get('name') or food.name
-        food.price = request.json.get('price') or food.price
-        food.is_gf = request.json.get('is_gf') if request.json.get('is_gf') is not None else food.is_gf
-        food.is_df = request.json.get('is_df') if request.json.get('is_df') is not None else food.is_df
-        food.is_v = request.json.get('is_v') if request.json.get('is_v') is not None else food.is_v
+        food.name = data.get('name') or food.name
+        food.price = data.get('price') or food.price
+        food.is_gf = data.get('is_gf') if request.json.get('is_gf') is not None else food.is_gf
+        food.is_df = data.get('is_df') if request.json.get('is_df') is not None else food.is_df
+        food.is_v = data.get('is_v') if request.json.get('is_v') is not None else food.is_v
         db.session.commit()
         return FoodSchema().dump(food)
     else:

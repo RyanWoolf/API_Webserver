@@ -1,11 +1,11 @@
 from flask import Blueprint, request, abort
-from config import db, query_by_id, not_found_simple
+from config import db, query_by_id, not_found_simple, not_found
 from models.customer import Customer
 from models.booking import Booking
 # from schemas.customer_schema import CustomerSchema
 from schemas.booking_schema import BookingSchema
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from controllers.auth_controller import authorization, is_customer
+from controllers.auth_controller import authorization, is_customer, authorization_admin
 from datetime import date, timedelta
 from random import randint
 from flask_jwt_extended import jwt_required
@@ -13,10 +13,6 @@ from flask_jwt_extended import jwt_required
 
 bookings_bp = Blueprint('bookings', __name__, url_prefix='/bookings')
 
-
-## Functions using a lot in this controller
-def not_found():
-    return {'error': f'Bookings not found.'}, 404
     
 # Assigning tables will be updated on the official release. This is for only MVC
 def assign_table(pax):
@@ -95,7 +91,7 @@ def search_bookings_date(year, month, day):
         return result
 
 
-#Get my bookings
+#Get my bookings by customer
 @bookings_bp.route('/mybookings/')
 @jwt_required()
 def get_my_bookings():
@@ -113,10 +109,11 @@ def get_my_bookings():
 @bookings_bp.route('/new', methods=['POST'])
 @jwt_required()
 def create_booking():
+    is_customer()
     data_booking = BookingSchema().load(request.json)
     booking = Booking(
-        date = data_booking['date'], # check again
-        time = data_booking['time'], # check again
+        date = data_booking['date'], # Will be updated in the official release
+        time = data_booking['time'], # Will be updated in the official release
         pax = data_booking['pax'],
         table_id = assign_table(data_booking['pax']),
         comment = data_booking.get('comment'),
@@ -127,3 +124,43 @@ def create_booking():
     customer.visited += 1 # Visited records
     db.session.commit()
     return BookingSchema().dump(booking), 201
+
+
+# Create a new booking by admin
+@bookings_bp.route('/new/admin/', methods=['POST'])
+@jwt_required()
+def create_booking_by_admin():
+    authorization_admin()
+    data_booking = BookingSchema().load(request.json)
+    booking = Booking(
+        date = data_booking['date'], # Will be updated in the official release
+        time = data_booking['time'], # Will be updated in the official release
+        pax = data_booking['pax'],
+        table_id = assign_table(data_booking['pax']),
+        comment = data_booking.get('comment'),
+        customer_id = data_booking['pax']
+    )
+    db.session.add(booking)
+    customer = query_by_id(Customer, booking.customer_id)
+    customer.visited += 1 # Visited records
+    db.session.commit()
+    return BookingSchema().dump(booking), 201
+
+
+
+#Modify booking. Only accessible through id
+@bookings_bp.route('/<int:id>/', methods = ['PUT', 'PATCH'])
+@jwt_required()
+def update_one_customer(id):
+    is_customer()
+    booking = query_by_id(Booking, id)
+    data = BookingSchema().load(request.json)
+    if booking:
+        booking.date = data.get('date') or booking.date
+        booking.time = data.get('time') or booking.time
+        booking.pax = data.get('pax') or booking.pax
+        booking.comment = data.get('comment') or booking.comment
+        db.session.commit()
+        return BookingSchema().dump(booking)
+    else:
+        return not_found('Booking', id)

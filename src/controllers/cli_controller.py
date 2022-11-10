@@ -135,7 +135,7 @@ def seed_db():
     db.session.add_all(foods)
     db.session.commit()
     
-    # Dummy customer setup
+    # Sample customer setup
     customer = [
         Customer(
         first_name = "Ryan",
@@ -147,10 +147,10 @@ def seed_db():
     db.session.add_all(customer)
     db.session.commit()
     
-    # Dummy booking setup
+    # Sample booking setup
     booking = Booking(
         date = date.today(),
-        time = date.today(),
+        time = "12:30",
         pax = 4,
         comment = "Test only",
         table = tables[3],
@@ -159,7 +159,7 @@ def seed_db():
     db.session.add(booking)
     db.session.commit()
 
-    # Dummy order and association table setup
+    # Sample order and association table setup
     order = Order(
             staff = staffs[0],
             table = tables[1],

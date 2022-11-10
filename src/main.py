@@ -1,4 +1,4 @@
-from flask import Flask, abort
+from flask import Flask, abort, jsonify
 from config import db, ma, bcrypt, jwt
 # from controllers.cards_controller import cards_bp
 from controllers.foods_controller import foods_bp
@@ -8,6 +8,7 @@ from controllers.auth_controller import auth_bp
 from controllers.customers_controller import customers_bp
 from controllers.bookings_controller import bookings_bp
 from controllers.orders_controller import orders_bp
+from controllers.tables_controller import tables_bp
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError
 import os
@@ -33,14 +34,27 @@ def create_app():
     @app.errorhandler(KeyError)
     def key_error(err):
         return {'error': f'The field {err} is required.'}, 400
+
+    # @app.errorhandler(TypeError)
+    # def type_error(err):
+    #     return {'error': f'{err}'}, 400
+    
+    # @app.errorhandler(DataError)
+    # def type_error(err):
+    #     return {'error': f'{err}'}, 400
     
     @app.errorhandler(ValidationError)
     def validate_error(err):
         return {'error' : err.messages}, 400
     
-    # @app.errorhandler(AttributeError)
-    # def attribute_error(err):
-    #     return {'error' : 'Attribute error..'}, 400
+    @app.errorhandler(IntegrityError)
+    def Integrity_error(err):
+        return {'error' : f'{err}'}, 400
+    
+    @app.errorhandler(AttributeError)
+    def attribute_error(err):
+        return {'error' : str(err)}, 400
+    
 
 
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
@@ -58,6 +72,7 @@ def create_app():
     app.register_blueprint(foods_bp)
     app.register_blueprint(orders_bp)
     app.register_blueprint(bookings_bp)
+    app.register_blueprint(tables_bp)
 
 
     return app

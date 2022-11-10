@@ -24,3 +24,4 @@ def not_found_simple(object):
 
 def not_found(table, id):
     return {'error': f'{table} {id} not found. Please try again'}, 404
+

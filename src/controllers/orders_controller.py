@@ -5,21 +5,16 @@ from models.food import Food
 from models.staff import Staff
 from models.table import Table
 from models.order_food import Order_Food
+from schemas.order_food_schema import Order_FoodSchema
 from schemas.order_schema import OrderSchema
 from schemas.table_schema import TableSchema  # Needs for modify order endpoint
 from controllers.auth_controller import authorization_admin, authorization
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import date
+from sqlalchemy.exc import DataError
 
 
 orders_bp = Blueprint('orders', __name__, url_prefix='/orders')
-
-
-# Total tables counts for future new table added in the db
-def total_tables():
-    stmt2 = db.select(db.func.count()).select_from(Table)
-    max_table = db.session.scalar(stmt2)
-    return max_table
 
 
 #Getting all orders from the db
@@ -29,7 +24,11 @@ def all_orders():
     authorization()
     stmt = db.select(Order).order_by(Order.id)
     orders = db.session.scalars(stmt)
-    return OrderSchema(many=True).dump(orders)
+    print(orders)
+    # print(OrderSchema(many=True).dump(orders))
+    return OrderSchema(many=True).dump(orders), 201
+# OrderSchema(many=True).dump(orders)
+# {'msg': 'successfully'} 
     
     
 #Get an order with id
@@ -94,7 +93,6 @@ def delete_one_order(id):
 def update_order(id):
     authorization_admin()
     order = query_by_id(Order, id)
-    total_table = total_tables()
     if order:
         order.total_price = request.json.get('total_price') or order.total_price # for example, discount reason
         order.is_paid = request.json.get('is_paid') if request.json.get('is_paid') is not None else order.is_paid
@@ -106,8 +104,6 @@ def update_order(id):
                 return not_found_simple('Staff')
             order.staff = staff_new
         if table:
-            if int(table) > total_table:
-                return not_found_simple('Table')
             table_new = query_by_id(Table, table)
             order.table = table_new
         food = request.json.get('food')
@@ -135,30 +131,37 @@ def update_order(id):
 @orders_bp.route('/new/table<int:table_number>', methods=['POST'])
 @jwt_required()
 def create_order(table_number):
-    authorization()
-    open_table = query_by_id(Table, table_number)
-    staff_id = query_by_id(Staff, get_jwt_identity())
-    order = Order(
-        staff = staff_id,
-        table = open_table,
-        date = date.today())
-    db.session.add(order)
-    db.session.commit()
-    data = request.json
-    total_json_keys, n = len(data.keys()), 1
-    foods_list = []
-    while n <= total_json_keys // 2:
-        food_id = request.json[f'food_{n}']
-        food_db = query_by_id(Food, food_id)
-        if not food_db:
-            return {'error': f'food id {food_id} not found'}, 404
-        food = (food_db, request.json[f'quantity_{n}'])
-        foods_list.append(food)
-        n += 1
-    order.generate_order_food(foods_list)
-    order.calc_total_price(foods_list)
-    db.session.commit()
-    return {'msg': f'Order id:{order.id} has been through successfully'}, 201
+    try:
+        authorization()
+        open_table = query_by_id(Table, table_number)
+        staff_id = query_by_id(Staff, get_jwt_identity())
+        order = Order(
+            staff = staff_id,
+            table = open_table,
+            date = date.today())
+        db.session.add(order)
+        db.session.commit()
+        data = request.json
+        total_json_keys, n = len(data.keys()), 1
+        foods_list = []
+        while n <= total_json_keys // 2:
+            food_id = request.json[f'food_{n}']
+            if not isinstance(food_id, int):
+                return {'error': 'Food id must be integer'}, 400
+            food_db = query_by_id(Food, food_id)
+            if not food_db:
+                return {'error': f'food id {food_id} not found'}, 404
+            food = (food_db, request.json[f'quantity_{n}'])
+            if not isinstance(request.json[f'quantity_{n}'], int):
+                return {'error': 'Quantity must be integer'}, 400            
+            foods_list.append(food)
+            n += 1
+        order.generate_order_food(foods_list)
+        order.calc_total_price(foods_list)
+        db.session.commit()
+        return {'msg': f'Order id:{order.id} has been through successfully'}, 201
+    except DataError:
+        return {'error': 'Please check the correct data type'}, 401
 # Hopefully payment system can be built before last commit
 
 

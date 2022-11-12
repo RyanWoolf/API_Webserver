@@ -76,7 +76,7 @@ def get_tomorrow_bookings():
     
     
 #search bookings by date
-@bookings_bp.route('/<string:year>/<string:month>/<string:day>')
+@bookings_bp.route('/<string:year>/<string:month>/<string:day>/')
 @jwt_required()
 def search_bookings_date(year, month, day):
     authorization()
@@ -97,7 +97,7 @@ def get_my_bookings():
     is_customer()
     stmt = db.select(Booking).filter_by(customer_id=get_jwt_identity())
     bookings = db.session.scalars(stmt)
-    result = BookingSchema(many=True).dump(bookings)
+    result = BookingSchema(many=True, exclude=['customer_id', 'customer']).dump(bookings)
     if len(result) == 0:
         return not_found_simple('Bookings')
     else:
@@ -105,7 +105,7 @@ def get_my_bookings():
 
 
 # Create a new booking by customer
-@bookings_bp.route('/new', methods=['POST'])
+@bookings_bp.route('/new/', methods=['POST'])
 @jwt_required()
 def create_booking():
     is_customer()
@@ -122,7 +122,7 @@ def create_booking():
     customer = query_by_id(Customer, get_jwt_identity())
     customer.visited += 1 # Visited records
     db.session.commit()
-    return BookingSchema().dump(booking), 201
+    return BookingSchema(exclude=['customer_id']).dump(booking), 201
 
 
 # Create a new booking by admin
@@ -137,7 +137,7 @@ def create_booking_by_admin():
         pax = data_booking['pax'],
         table_id = assign_table(data_booking['pax']),
         comment = data_booking.get('comment'),
-        customer_id = data_booking['pax']
+        customer_id = data_booking['customer_id']
     )
     db.session.add(booking)
     customer = query_by_id(Customer, booking.customer_id)
@@ -160,7 +160,7 @@ def update_one_customer(id):
         booking.pax = data.get('pax') or booking.pax
         booking.comment = data.get('comment') or booking.comment
         db.session.commit()
-        return BookingSchema().dump(booking)
+        return BookingSchema(exclude=['customer_id']).dump(booking)
     else:
         return not_found('Booking', id)
     
@@ -174,5 +174,5 @@ def delete_booking(id):
     if booking:
         db.session.delete(booking)
         db.session.commit()
-        return {'msg': f'Booking ID {id} deleted successfully'}, 200
+        return {'msg': f'Booking ID {id} deleted successfully'}
     return not_found('Booking', id)

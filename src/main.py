@@ -23,14 +23,18 @@ def create_app():
     @app.errorhandler(400)
     def bad_request(err):
         return {'error': str(err)}, 400
+        
+    @app.errorhandler(401)
+    def unauthorized(err):
+        return {'error': str(err)}, 401
     
     @app.errorhandler(404)
     def not_found(err):
         return {'error': str(err)}, 404
     
-    @app.errorhandler(401)
-    def unauthorized(err):
-        return {'error': str(err)}, 401
+    @app.errorhandler(405)
+    def method_not_allowed(err):
+        return {'error': str(err)}, 405
     
     @app.errorhandler(KeyError)
     def key_error(err):

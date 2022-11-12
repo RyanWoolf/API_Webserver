@@ -18,7 +18,7 @@ def all_customers():
     authorization()
     stmt = db.select(Customer).order_by(Customer.id)
     customers = db.session.scalars(stmt)
-    return CustomerSchema(many=True).dump(customers), 201
+    return CustomerSchema(many=True, exclude=['password']).dump(customers)
     
     
 #Get specific customer with id
@@ -28,7 +28,7 @@ def get_one_customer(id):
     authorization()
     customer = query_by_id(Customer, id)
     if customer:
-        return CustomerSchema().dump(customer)
+        return CustomerSchema(exclude=['password']).dump(customer)
     else:
         return not_found('Customer', id)
     
@@ -41,16 +41,16 @@ def search_customer(f_name):
     stmt = db.select(Customer).filter_by(first_name=f_name.capitalize())
     customers = db.session.scalars(stmt)
     # We can't guess the result is none or only one or more than one. 
-    # So use condition on len(result) to distinguish how many result could be returned
-    result = CustomerSchema(many=True).dump(customers)
+    # So use condition on len(result) to know the result has at lease one 
+    result = CustomerSchema(many=True, exclude=['password']).dump(customers)
     if len(result) == 0:
         return {'error': f'Customer {f_name} not found'}, 404
     else:
         return result
 
 
-#Get specific customer with full name. first name/last name
-@customers_bp.route('/<string:f_name>/<string:l_name>')
+#Get specific customer with full name. first name and last name
+@customers_bp.route('/<string:f_name>/<string:l_name>/')
 @jwt_required()
 def search_customer_fullname(f_name, l_name):
     authorization()
@@ -58,7 +58,7 @@ def search_customer_fullname(f_name, l_name):
         first_name=f_name.capitalize(), 
         last_name=l_name.capitalize())
     customers = db.session.scalars(stmt) # there could be lots of customers with exactly same name
-    result = CustomerSchema(many=True).dump(customers)
+    result = CustomerSchema(many=True, exclude=['password']).dump(customers)
     if len(result) == 0:
         return {'error': f'Customer {f_name} {l_name} not found'}, 404
     else:
@@ -66,7 +66,7 @@ def search_customer_fullname(f_name, l_name):
 
 
 #New customer join through here
-@customers_bp.route('/join', methods=['POST'])
+@customers_bp.route('/join/', methods=['POST'])
 def customer_join():
     try:
         data = CustomerSchema().load(request.json)
@@ -86,13 +86,13 @@ def customer_join():
 
 
 # Customer login through here
-@customers_bp.route('/login/', methods=['POST'])
+@customers_bp.route('/login/')
 def customer_login():
     stmt = db.select(Customer).filter_by(email=request.json['email'])
     customer = db.session.scalar(stmt)
     if customer and bcrypt.check_password_hash(customer.password, request.json['password']):
         token = create_access_token(identity=str(customer.id), expires_delta=timedelta(days=1))
-        return {'email': customer.email, 'token': token}, 200 # for testing purpose only. Should be proper welcome page irl
+        return {'msg': f'Welcome. {customer.first_name} {customer.last_name}', 'token': token}
     else:
         return {'error': 'Invalid email or password'}, 401
 
@@ -106,7 +106,7 @@ def delete_one_customer(id):
     if customer:
         db.session.delete(customer)
         db.session.commit()
-        return {'msg': f'Customer id:{id} {customer.first_name} {customer.last_name} deleted successfully'}
+        return {'msg': f'Customer id: {id} {customer.first_name} {customer.last_name} deleted successfully'}
     else:
         return not_found('Customer', id)
 
@@ -124,6 +124,6 @@ def update_one_customer(id):
         customer.email = request.json.get('email') or customer.email
         customer.visited = request.json.get('visited') or customer.visited
         db.session.commit()
-        return CustomerSchema().dump(customer)
+        return CustomerSchema(exclude=['password']).dump(customer)
     else:
         return not_found('Customer', id)

@@ -5,9 +5,9 @@ from marshmallow import fields
 class OrderSchema(ma.Schema):
     staff = fields.Nested('StaffSchema', only=['id', 'staff_name'])  
     table = fields.Nested('TableSchema', only=['number'])
-    food = fields.Nested('Order_FoodSchema', many=True)
     is_paid = fields.Boolean()
+    order_id = fields.Nested('Order_FoodSchema', many=True, only=['food', 'quantity'])
      
     class Meta:
-        fields = ('id', 'date', 'table', 'staff', 'total_price', 'is_paid', 'food')
+        fields = ('id', 'date', 'table', 'staff', 'order_id', 'total_price', 'is_paid')
         ordered = True

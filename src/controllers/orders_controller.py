@@ -1,4 +1,4 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, jsonify
 from config import db, query_by_id, not_found, not_found_simple
 from models.order import Order
 from models.food import Food
@@ -10,6 +10,7 @@ from schemas.order_schema import OrderSchema
 from schemas.table_schema import TableSchema  # Needs for modify order endpoint
 from controllers.auth_controller import authorization_admin, authorization
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from sqlalchemy.orm import joinedload
 from datetime import date
 from sqlalchemy.exc import DataError
 
@@ -55,7 +56,7 @@ def open_today_orders():
     
     
 #Search orders by date
-@orders_bp.route('/<string:year>/<string:month>/<string:day>')
+@orders_bp.route('/<string:year>/<string:month>/<string:day>/')
 @jwt_required()
 def search_orders_date(year, month, day):
     authorization()
@@ -90,7 +91,7 @@ def update_order(id):
     authorization_admin()
     order = query_by_id(Order, id)
     if order:
-        order.total_price = request.json.get('total_price') or order.total_price # for example, discount reason
+        order.total_price = request.json.get('total_price') or order.total_price # this is used for discount reason
         order.is_paid = request.json.get('is_paid') if request.json.get('is_paid') is not None else order.is_paid
         staff = request.json.get('staff')
         table = request.json.get('table')
@@ -106,7 +107,7 @@ def update_order(id):
                 return {'error': 'Table number must be integer'}, 400
             stmt_table = db.select(Table).filter_by(number=table)
             table_new = db.session.scalar(stmt_table)
-            order.table = table_new.id
+            order.table_id = table_new.id
         food = request.json.get('food')
         if food:
             if not isinstance(food, int):
@@ -133,7 +134,7 @@ def update_order(id):
     
 
 # Place a new order
-@orders_bp.route('/new/table<int:table_number>', methods=['POST'])
+@orders_bp.route('/new/table<int:table_number>/', methods=['POST'])
 @jwt_required()
 def create_order(table_number):
     try:
@@ -150,34 +151,34 @@ def create_order(table_number):
         total_json_keys, n = len(data.keys()), 1
         foods_list = []
         while n <= total_json_keys // 2:
-            food_id = request.json[f'food_{n}']
+            food_id = data[f'food_{n}']
             if not isinstance(food_id, int):
                 return {'error': 'Food id must be integer'}, 400
             food_db = query_by_id(Food, food_id)
             if not food_db:
                 return {'error': f'food id {food_id} not found'}, 404
-            food = (food_db, request.json[f'quantity_{n}'])
-            if not isinstance(request.json[f'quantity_{n}'], int):
+            food = (food_db, data[f'quantity_{n}'])
+            if not isinstance(data[f'quantity_{n}'], int):
                 return {'error': 'Quantity must be integer'}, 400            
             foods_list.append(food)
             n += 1
         order.generate_order_food(foods_list)
         order.calc_total_price(foods_list)
         db.session.commit()
-        return {'msg': f'Order id:{order.id} has been through successfully'}, 201
+        return OrderSchema().dump(order), 201
     except DataError:
         return {'error': 'Please check the correct data type'}, 401
 # Hopefully payment system can be built before last commit
 
 
 # Check the todays order from a table
-@orders_bp.route('/open/table<int:table_number>', methods=['POST'])
+@orders_bp.route('/today/table<int:table_number>/')
 @jwt_required()
 def check_order_table(table_number):
     authorization()
     stmt = db.select(Order).filter_by(table_id=table_number, date=date.today())
-    table = db.session.scalars(stmt)
-    result = OrderSchema(many=True).dump(table)
+    order = db.session.scalars(stmt)
+    result = OrderSchema(many=True).dump(order)
     if len(result) == 0:
         return {'error': f'Order in table {table_number} not found.'}, 404
     else:

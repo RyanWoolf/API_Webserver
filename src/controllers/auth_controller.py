@@ -1,5 +1,5 @@
 from flask import Blueprint, request, abort
-from config import db, bcrypt, query_by_id
+from config import db, bcrypt, query_by_id, not_found
 from datetime import timedelta
 from models.staff import Staff
 from schemas.staff_schema import StaffSchema
@@ -19,15 +19,18 @@ def is_customer():
 # Check if you're a staff
 def authorization(): # check again please
     staff_id = get_jwt_identity()
-    if int(staff_id) > 100:
+    if int(staff_id) >= 100:
         abort(401, description='Only staff members allowed')
         
 # Check if you're an admin
 def authorization_admin():
     staff_id = get_jwt_identity()
+    if int(staff_id) >= 100:
+        abort(401, description='Only admins allowed')
     staff = query_by_id(Staff, staff_id)
     if not staff.is_admin:
         abort(401, description='Only admins allowed')
+        
 
 
 #Login staff section
@@ -44,7 +47,9 @@ def auth_login():
 
 #Register staff section
 @auth_bp.route('/register/', methods=['POST'])
+@jwt_required()
 def auth_register():
+    authorization_admin()
     try:
         staff = Staff(
             login_id=request.json['login_id'],
@@ -67,3 +72,50 @@ def get_staffs():
     stmt = db.select(Staff).order_by(Staff.id)
     users = db.session.scalars(stmt)
     return StaffSchema(many=True, exclude=['password']).dump(users)
+
+
+#Find a staff by id
+@auth_bp.route('/staffs/<int:id>/')
+@jwt_required()
+def find_staff(id):
+    authorization_admin()
+    staff = query_by_id(Staff, id)
+    if staff:
+        return StaffSchema(exclude=['password']).dump(staff)
+    else:
+        return not_found('Staff', id)
+ 
+    
+#Modify staff info
+@auth_bp.route('/staffs/<int:id>/', methods=['PUT', 'PATCH'])
+@jwt_required()
+def modify_staff(id):
+    authorization_admin()
+    staff = query_by_id(Staff, id)
+    if staff:
+        data = StaffSchema().load(request.json)
+        staff.staff_name = data.get('staff_name') or staff.staff_name
+        staff.login_id = data.get('login_id') or staff.login_id
+        staff.password = bcrypt.generate_password_hash(
+            data.get('password')).decode('utf-8') or staff.password
+        staff.is_admin = data.get('is_admin') if data.get('is_admin') is not None else staff.is_admin
+        db.session.commit()
+        return StaffSchema(exclude=['password']).dump(staff)
+    else:
+        return not_found('Staff', id)
+    
+    
+#Delete a staff by id
+@auth_bp.route('/staffs/<int:id>/', methods=['DELETE'])
+@jwt_required()
+def delete_staff(id):
+    authorization_admin()
+    staff = query_by_id(Staff, id)
+    if staff:
+        db.session.delete(staff)
+        db.session.commit()
+        return {'msg': f'Staff ID: {staff.id} deleted successfully'}
+    else:
+        return not_found('Staff', id)
+ 
+    

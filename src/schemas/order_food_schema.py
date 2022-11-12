@@ -4,7 +4,7 @@ from marshmallow import fields
 
 class Order_FoodSchema(ma.Schema):
     order = fields.Nested('OrderSchema', only=['id'])
-    food = fields.Nested('FoodSchema', only=['id'])
+    food = fields.Nested('FoodSchema', only=['id', 'name'])
 
     
     class Meta:

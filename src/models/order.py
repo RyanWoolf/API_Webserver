@@ -22,6 +22,7 @@ class Order(db.Model):
  
     
     food = relationship('Food', secondary='order_food', viewonly=True)
+    order_id = relationship('Order_Food')
     
     def generate_order_food(self, items):
         for food, qty in items:

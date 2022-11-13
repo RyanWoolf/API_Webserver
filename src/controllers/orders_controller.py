@@ -168,7 +168,6 @@ def create_order(table_number):
         return OrderSchema().dump(order), 201
     except DataError:
         return {'error': 'Please check the correct data type'}, 401
-# Hopefully payment system can be built before last commit
 
 
 # Check the todays order from a table

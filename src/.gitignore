@@ -1,5 +1,3 @@
-src/.venv
-src/.flaskenv
-src/.env
+.venv
 first.md
 __pycache__

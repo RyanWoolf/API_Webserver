@@ -9,10 +9,9 @@ class CustomerSchema(ma.Schema):
                      Regexp('^[0-9 ]+$', error="Only numbers valid")))
     
     email = fields.String(
-        validate=Email(error="Must be valid email address"))
+        validate=Email(error="Must be an email address"))
     
     password = fields.String()
-    
     first_name = fields.String()
     last_name = fields.String()
 

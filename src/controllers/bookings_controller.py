@@ -111,8 +111,8 @@ def create_booking():
     is_customer()
     data_booking = BookingSchema().load(request.json)
     booking = Booking(
-        date = data_booking['date'], # Will be updated in the official release
-        time = data_booking['time'], # Will be updated in the official release
+        date = data_booking['date'], 
+        time = data_booking['time'],
         pax = data_booking['pax'],
         table_id = assign_table(data_booking['pax']),
         comment = data_booking.get('comment'),
@@ -132,8 +132,8 @@ def create_booking_by_admin():
     authorization_admin()
     data_booking = BookingSchema().load(request.json)
     booking = Booking(
-        date = data_booking['date'], # Will be updated in the official release
-        time = data_booking['time'], # Will be updated in the official release
+        date = data_booking['date'], 
+        time = data_booking['time'], 
         pax = data_booking['pax'],
         table_id = assign_table(data_booking['pax']),
         comment = data_booking.get('comment'),

@@ -2,17 +2,18 @@ from flask import Blueprint, request
 from config import db, query_by_id, not_found
 from models.payment import Payment
 from schemas.payment_schema import PaymentSchema, VALID_PAYMENT
-from controllers.auth_controller import authorization_admin
+from controllers.auth_controller import authorization_admin, authorization
 from flask_jwt_extended import jwt_required
 
 
 payments_bp = Blueprint('payments', __name__, url_prefix='/payments')
 
 
-
 #Getting all methods from the db
 @payments_bp.route('/')
+@jwt_required()
 def all_methods():
+    authorization()
     stmt = db.select(Payment).order_by(Payment.id)
     foods = db.session.scalars(stmt)
     return PaymentSchema(many=True).dump(foods), 201

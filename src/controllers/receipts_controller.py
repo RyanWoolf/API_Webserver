@@ -67,7 +67,7 @@ def create_receipt(number):
         db.session.add(new_receipt)
         order.is_paid = True
         db.session.commit()
-        return {'msg': f'Receipt from Table {number} is created.'}, 201
+        return ReceiptSchema().dump(new_receipt), 201
     else:
         return {'error': f'Table {number} is not found'}, 404
     

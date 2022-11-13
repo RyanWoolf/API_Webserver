@@ -7,9 +7,11 @@ class CustomerSchema(ma.Schema):
     phone = fields.String(
         validate=And(Length(equal=10, error="Must be 10 digits of numbers"), 
                      Regexp('^[0-9 ]+$', error="Only numbers valid")))
+    # Only for proper phone number format
     
     email = fields.String(
         validate=Email(error="Must be an email address"))
+    # only email format valid
     
     password = fields.String()
     first_name = fields.String()

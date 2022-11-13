@@ -60,7 +60,7 @@ def open_today_orders():
 @jwt_required()
 def search_orders_date(year, month, day):
     authorization()
-    date_to_search = '-'.join([year, month, day])
+    date_to_search = '-'.join([year, month, day]) # reform to Datetype format
     stmt = db.select(Order).filter_by(date=date_to_search)
     order = db.session.scalars(stmt)
     result = OrderSchema(many=True).dump(order) # result can be none or one or a lot
@@ -84,6 +84,63 @@ def delete_one_order(id):
         return not_found('Order', id)
     
 
+# Check the todays order from a table
+@orders_bp.route('/today/table<int:table_number>/')
+@jwt_required()
+def check_order_table(table_number):
+    authorization() 
+    stmt = db.select(Order).filter_by(table_id=table_number, date=date.today(), is_paid=False)
+    # Find the table using URI, and search for it. If it's paid, No need to be found
+    order = db.session.scalars(stmt)
+    result = OrderSchema(many=True).dump(order)
+    # Because result can be none or one or a lot.
+    if len(result) == 0:
+        return {'error': f'Order in table {table_number} not found.'}, 404
+    else:
+        return result
+
+    
+
+# Place a new order
+## Very much important part
+@orders_bp.route('/new/table<int:table_number>/', methods=['POST'])
+@jwt_required()
+def create_order(table_number):
+    try:
+        authorization() ## In order table, Staff id and table id is FKs. It can't be simply taken from integer result
+        stmt_table = db.select(Table).filter_by(number=table_number) # search the table by number not ID, reasons is explain in model
+        open_table = db.session.scalar(stmt_table) # Take the Table infos
+        staff_id = query_by_id(Staff, get_jwt_identity()) # Take the staff id 
+        order = Order(
+            staff = staff_id,
+            table = open_table,
+            date = date.today())
+        db.session.add(order)
+        db.session.commit()
+        data = request.json
+        total_json_keys, n = len(data.keys()), 1  # We don't want to take one kind of food at one time 
+        foods_list = []                           # Using iteration, take as many as you want to put through
+        while n <= total_json_keys // 2:          # store the json(in dict form) to a list and count how many foods is there
+            food_id = data[f'food_{n}']           # Food and quantity is one set, so half of the entire dict is the total number of food we're trying to order
+            if not isinstance(food_id, int):
+                return {'error': 'Food id must be integer'}, 400
+            food_db = query_by_id(Food, food_id)
+            if not food_db:
+                return {'error': f'food id {food_id} not found'}, 404
+            food = (food_db, data[f'quantity_{n}'])
+            if not isinstance(data[f'quantity_{n}'], int):
+                return {'error': 'Quantity must be integer'}, 400            
+            foods_list.append(food)
+            n += 1
+        order.generate_order_food(foods_list)     # use class function to generate an instance of Order_Food table 
+        order.calc_total_price(foods_list)        # Calculate the total price and update it to Order instance
+        db.session.commit()
+        return OrderSchema().dump(order), 201
+    except DataError:
+        return {'error': 'Please check the correct data type'}, 401
+
+
+
 #Modify order. Only accessible through id
 @orders_bp.route('/<int:id>/', methods = ['PUT', 'PATCH'])
 @jwt_required()
@@ -96,35 +153,35 @@ def update_order(id):
         staff = request.json.get('staff')
         table = request.json.get('table')
         if staff:
-            if not isinstance(staff, int):
+            if not isinstance(staff, int):  # Check the input is int
                 return {'error': 'Staff id must be integer'}, 400
-            staff_new = query_by_id(Staff, staff)
-            if not staff_new:
+            staff_new = query_by_id(Staff, staff)                       # if yes, search the staff we want
+            if not staff_new:                                           # also check the staff we're searching exists
                 return not_found_simple('Staff')
-            order.staff = staff_new
+            order.staff = staff_new                                     # If all good, set the staff in Order instance
         if table:
-            if not isinstance(table, int):
+            if not isinstance(table, int):  # Check the input is int
                 return {'error': 'Table number must be integer'}, 400
             stmt_table = db.select(Table).filter_by(number=table)
             table_new = db.session.scalar(stmt_table)
-            order.table_id = table_new.id
-        food = request.json.get('food')
+            order.table_id = table_new.id                               # Same procedure 
+        food = request.json.get('food')                                 # Checking the staff and searching the right table is done here
         if food:
-            if not isinstance(food, int):
+            if not isinstance(food, int):   # Check the input is int
                 return {'error': 'Food id must be integer'}, 400
-            stmt = db.select(Order_Food).filter_by(order_id=id, food_id=food)
-            food_current = db.session.scalar(stmt)
+            stmt = db.select(Order_Food).filter_by(order_id=id, food_id=food)       # search the detail(Order_Food) using order_id and food_id
+            food_current = db.session.scalar(stmt)                                  
             if food_current:
-                qty_new = request.json.get('quantity')
+                qty_new = request.json.get('quantity')                              
                 if not isinstance(qty_new, int):
                     return {'error': 'Quantity number must be integer'}, 400
                 food_new = query_by_id(Food, food)
                 qty_before = food_current.quantity
-                db.session.query(Order_Food).filter(
+                db.session.query(Order_Food).filter(                                # Update the quantity of the food
                     Order_Food.order_id == id, 
                     Order_Food.food_id == food).update(
                         {"quantity": qty_new}, synchronize_session="fetch")
-                order.total_price += food_new.price * (qty_new - qty_before)
+                order.total_price += food_new.price * (qty_new - qty_before)        # Update the total price
             else:
                 return {'error': 'Food not found in the order'}, 404
         db.session.commit()
@@ -132,53 +189,4 @@ def update_order(id):
     else:
         return not_found('Order', id)
     
-
-# Place a new order
-@orders_bp.route('/new/table<int:table_number>/', methods=['POST'])
-@jwt_required()
-def create_order(table_number):
-    try:
-        authorization()
-        open_table = query_by_id(Table, table_number)
-        staff_id = query_by_id(Staff, get_jwt_identity())
-        order = Order(
-            staff = staff_id,
-            table = open_table,
-            date = date.today())
-        db.session.add(order)
-        db.session.commit()
-        data = request.json
-        total_json_keys, n = len(data.keys()), 1
-        foods_list = []
-        while n <= total_json_keys // 2:
-            food_id = data[f'food_{n}']
-            if not isinstance(food_id, int):
-                return {'error': 'Food id must be integer'}, 400
-            food_db = query_by_id(Food, food_id)
-            if not food_db:
-                return {'error': f'food id {food_id} not found'}, 404
-            food = (food_db, data[f'quantity_{n}'])
-            if not isinstance(data[f'quantity_{n}'], int):
-                return {'error': 'Quantity must be integer'}, 400            
-            foods_list.append(food)
-            n += 1
-        order.generate_order_food(foods_list)
-        order.calc_total_price(foods_list)
-        db.session.commit()
-        return OrderSchema().dump(order), 201
-    except DataError:
-        return {'error': 'Please check the correct data type'}, 401
-
-
-# Check the todays order from a table
-@orders_bp.route('/today/table<int:table_number>/')
-@jwt_required()
-def check_order_table(table_number):
-    authorization()
-    stmt = db.select(Order).filter_by(table_id=table_number, date=date.today())
-    order = db.session.scalars(stmt)
-    result = OrderSchema(many=True).dump(order)
-    if len(result) == 0:
-        return {'error': f'Order in table {table_number} not found.'}, 404
-    else:
-        return result
+    

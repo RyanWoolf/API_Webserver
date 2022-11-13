@@ -160,7 +160,7 @@ def seed_db():
     db.session.add(booking)
     db.session.commit()
 
-    # Sample order and association table setup
+    # Sample order and sample association table setup
     order = Order(
             staff = staffs[0],
             table = tables[1],
@@ -168,15 +168,16 @@ def seed_db():
         )
     db.session.add(order)
     db.session.commit()
+    item = [(foods[0], 3), (foods[2], 2)]
+    order.generate_order_food(item)
+    order.calc_total_price(item)
+    db.session.commit()
+    
+    # Sample Receipt
     receipt = Receipt(
         orders = order,
         payments = payments[1])
     db.session.add(receipt)
     db.session.commit()
-    item = [(foods[0], 3), (foods[2], 2)]
-    order.generate_order_food(item)
-    order.calc_total_price(item)
-    db.session.commit()
-
     
     print('Initial tables seeded')

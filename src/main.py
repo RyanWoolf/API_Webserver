@@ -20,6 +20,7 @@ import os
 def create_app():
     app = Flask(__name__)
 
+    ## Error handlers
     @app.errorhandler(400)
     def bad_request(err):
         return {'error': str(err)}, 400
@@ -65,16 +66,18 @@ def create_app():
         return {'error' : str(err)}, 400
     
 
-
+    ## App configs
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
     app.config['JWT_SECRET_KEY'] = os.environ.get('SECRET_KEY')
     app.config['JSON_SORT_KEYS'] = False
 
+    ## packages initiating
     db.init_app(app)
     ma.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)
 
+    # Register blueprints
     app.register_blueprint(customers_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(db_commands)

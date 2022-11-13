@@ -32,7 +32,7 @@ def add_method():
     )
     db.session.add(method)
     db.session.commit()
-    VALID_PAYMENT.append(method.method)
+    VALID_PAYMENT.append(method.method)     # Add new payment method to Valid list
     return PaymentSchema().dump(method), 201
 
 
@@ -43,7 +43,7 @@ def delete_one_method(id):
     authorization_admin()
     method = query_by_id(Payment, id)
     if method:
-        VALID_PAYMENT.remove(method.method)
+        VALID_PAYMENT.remove(method.method) # Delete it from Valid list
         db.session.delete(method)
         db.session.commit()
         return {'msg': f'Payment method: {method.method} deleted successfully'}
@@ -51,7 +51,7 @@ def delete_one_method(id):
         return not_found('Payment', id)
 
 
-#Modify food. Only accessible through id
+#Modify payment method. Only accessible through id
 @payments_bp.route('/<int:id>/', methods = ['PUT', 'PATCH'])
 @jwt_required()
 def update_one_method(id):
@@ -61,7 +61,7 @@ def update_one_method(id):
     if not isinstance(new_method, str):
         return {'error': 'It must be a string'}
     if method:
-        VALID_PAYMENT.remove(method.method)
+        VALID_PAYMENT.remove(method.method) # Mechanisma here is not updating method but delete the previous one and add the new one
         method.method = new_method
         VALID_PAYMENT.append(new_method)
         db.session.commit()

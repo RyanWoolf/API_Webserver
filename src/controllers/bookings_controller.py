@@ -12,8 +12,8 @@ from flask_jwt_extended import jwt_required
 
 bookings_bp = Blueprint('bookings', __name__, url_prefix='/bookings')
 
-    
-# Assigning tables will be updated on the official release. This is for only MVC
+## Functions used common in app
+# Assigning tables will be updated on the official release. This is for only MVP
 def assign_table(pax):
     try:
         if int(pax) <= 4:
@@ -67,11 +67,13 @@ def get_today_bookings():
 def get_tomorrow_bookings():
     authorization()
     stmt = db.select(Booking).filter_by(date=date.today()+timedelta(days=1))
+    # Tomorrow is the one next from today
     booking = db.session.scalars(stmt)
     result = BookingSchema(many=True).dump(booking)
-    if len(result) == 0:
+    # Because result can be none or one or a lot.
+    if len(result) == 0: # if none
         return not_found_simple('Bookings')
-    else:
+    else: # if there is anything
         return result
     
     
@@ -80,10 +82,11 @@ def get_tomorrow_bookings():
 @jwt_required()
 def search_bookings_date(year, month, day):
     authorization()
-    date_to_search = '-'.join([year, month, day])
+    date_to_search = '-'.join([year, month, day]) # reform to Datetype format
     stmt = db.select(Booking).filter_by(date=date_to_search)
     bookings = db.session.scalars(stmt)
-    result = BookingSchema(many=True).dump(bookings) # result can be none or one or a lot
+    result = BookingSchema(many=True).dump(bookings)
+    # Because result can be none or one or a lot. 
     if len(result) == 0:
         return not_found_simple('Bookings')
     else:
@@ -108,13 +111,13 @@ def get_my_bookings():
 @bookings_bp.route('/new/', methods=['POST'])
 @jwt_required()
 def create_booking():
-    is_customer()
+    is_customer() # Check whether this token is customers or staffs
     data_booking = BookingSchema().load(request.json)
     booking = Booking(
         date = data_booking['date'], 
         time = data_booking['time'],
         pax = data_booking['pax'],
-        table_id = assign_table(data_booking['pax']),
+        table_id = assign_table(data_booking['pax']), # Table assigned depends on pax, 
         comment = data_booking.get('comment'),
         customer_id = get_jwt_identity()
     )
@@ -152,7 +155,7 @@ def create_booking_by_admin():
 @jwt_required()
 def update_one_customer(id):
     is_customer()
-    booking = query_by_id(Booking, id)
+    booking = query_by_id(Booking, id) # Customer should know Booking id after confirm of booking
     data = BookingSchema().load(request.json)
     if booking:
         booking.date = data.get('date') or booking.date

@@ -40,9 +40,9 @@ def search_customer(f_name):
     authorization()
     stmt = db.select(Customer).filter_by(first_name=f_name.capitalize())
     customers = db.session.scalars(stmt)
-    # We can't guess the result is none or only one or more than one. 
-    # So use condition on len(result) to know the result has at lease one 
     result = CustomerSchema(many=True, exclude=['password']).dump(customers)
+    # We can't guess the result is none or only one or more than one. 
+    # So use condition on len(result) to know the result has at least one 
     if len(result) == 0:
         return {'error': f'Customer {f_name} not found'}, 404
     else:
@@ -57,7 +57,7 @@ def search_customer_fullname(f_name, l_name):
     stmt = db.select(Customer).filter_by(
         first_name=f_name.capitalize(), 
         last_name=l_name.capitalize())
-    customers = db.session.scalars(stmt) # there could be lots of customers with exactly same name
+    customers = db.session.scalars(stmt) # there could be more of customers with exactly same name
     result = CustomerSchema(many=True, exclude=['password']).dump(customers)
     if len(result) == 0:
         return {'error': f'Customer {f_name} {l_name} not found'}, 404

@@ -53,7 +53,7 @@ def delete_one_receipt(id):
 @jwt_required()
 def create_receipt(number):
     authorization()
-    stmt = db.select(Order).filter_by(table_id=number, is_paid=False)
+    stmt = db.select(Order).filter_by(table_id=number, is_paid=False)   # If is_paid is True, the receipt for this is already processed
     order = db.session.scalar(stmt)
     data_payment = PaymentSchema().load(request.json)
     payment_method = data_payment['method']
@@ -65,7 +65,7 @@ def create_receipt(number):
             payment_id = payment_id.id
         )
         db.session.add(new_receipt)
-        order.is_paid = True
+        order.is_paid = True                  # Turning it to True means, now this Order is paid and no need to process again
         db.session.commit()
         return ReceiptSchema().dump(new_receipt), 201
     else:

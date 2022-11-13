@@ -7,6 +7,7 @@ class OrderSchema(ma.Schema):
     table = fields.Nested('TableSchema', only=['number'])
     is_paid = fields.Boolean()
     order_id = fields.Nested('Order_FoodSchema', many=True, only=['food', 'quantity'])
+    # To show the detail orders through JSON
      
     class Meta:
         fields = ('id', 'date', 'table', 'staff', 'order_id', 'total_price', 'is_paid')

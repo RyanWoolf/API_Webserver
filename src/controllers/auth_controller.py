@@ -9,18 +9,22 @@ from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_requir
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
-
-# CHeck if you're a customer
+## Functions that used a lot in the app, about Authentication and Authorization
+# Check if you're a customer
 def is_customer():
     id = get_jwt_identity()
     if int(id) < 100:
         return abort(401, description='No Access to customer page.')
-
+    ## Because Customers id starts from 100, if the number from JWT is under 100, that means it's a staff    
+    
+    
 # Check if you're a staff
 def authorization(): # check again please
     staff_id = get_jwt_identity()
     if int(staff_id) >= 100:
         abort(401, description='Only staff members allowed')
+        ## Because Customers id starts from 100, if the number from JWT is under 100, that means it's a staff 
+        
         
 # Check if you're an admin
 def authorization_admin():
@@ -33,7 +37,8 @@ def authorization_admin():
         
 
 
-#Login staff section
+# Login staff section
+# login_id and password from JSON, it searches them in the db and if true, it gives the user TOKEN
 @auth_bp.route('/login/', methods=['POST'])
 def auth_login():
     stmt = db.select(Staff).filter_by(login_id=request.json['login_id'])
@@ -49,11 +54,11 @@ def auth_login():
 @auth_bp.route('/register/', methods=['POST'])
 @jwt_required()
 def auth_register():
-    authorization_admin()
+    authorization_admin() # Adding Staff is admin only
     try:
         staff = Staff(
             login_id=request.json['login_id'],
-            password=bcrypt.generate_password_hash(request.json['password']).decode('utf-8'),
+            password=bcrypt.generate_password_hash(request.json['password']).decode('utf-8'), # Create a hashed password 
             staff_name=request.json.get('staff_name')
         )
         db.session.add(staff)
@@ -99,6 +104,7 @@ def modify_staff(id):
         staff.password = bcrypt.generate_password_hash(
             data.get('password')).decode('utf-8') or staff.password
         staff.is_admin = data.get('is_admin') if data.get('is_admin') is not None else staff.is_admin
+        ## Because get() method return none if there's no input, give a condition to check the input
         db.session.commit()
         return StaffSchema(exclude=['password']).dump(staff)
     else:

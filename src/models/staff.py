@@ -10,4 +10,5 @@ class Staff(db.Model):
     password = db.Column(db.String(), nullable=False)
     is_admin = db.Column(db.Boolean(), default=False)
     
+    # Fields for FK
     orders = db.relationship('Order', back_populates='staff')

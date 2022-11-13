@@ -33,7 +33,7 @@ def get_one_food(id):
 def search_food(tag):
     if not tag.lower() in tags:
         return {'error': 'Failed to search. Please check the tag and try again.'}, 404
-    else:
+    else:  # user can input any form of alphabet such as GF, gf, gF
         if tag.lower() == 'gf':
             stmt = db.select(Food).filter_by(is_gf=True)
             food = db.session.scalars(stmt)
@@ -50,16 +50,16 @@ def search_food(tag):
 @foods_bp.route('/<string:tag1>/<string:tag2>')
 def search_food_tags(tag1, tag2):
     tag1, tag2 = tag1.lower(), tag2.lower()
-    if tag1 not in tags or tag2 not in tags:
+    if tag1 not in tags or tag2 not in tags: # If any tags not in the tuple, you can't find a result
         return {'error': 'Failed to search. Please check the tag and try again.'}, 404
-    elif tag1 == tag2: # If you put two same tags, it redirects to search_food
+    elif tag1 == tag2: # If you put two same tags, it redirects to search_food endpoint, no need to write same code again
         return redirect(url_for('foods.search_food', tag = tag1))
-    rest = list(tags)
-    rest.remove(tag1)
-    rest.remove(tag2)
-    if 'v' in rest:
-        stmt = db.select(Food).filter_by(is_gf=True, is_df=True)
-        food = db.session.scalars(stmt)
+    rest = list(tags) # Aliasing the tuple and cast to list
+    rest.remove(tag1) # remove the first tag
+    rest.remove(tag2) # remove the second tag
+    if 'v' in rest: 
+        stmt = db.select(Food).filter_by(is_gf=True, is_df=True) 
+        food = db.session.scalars(stmt) 
     elif 'gf' in rest:
         stmt = db.select(Food).filter_by(is_df=True, is_v=True)
         food = db.session.scalars(stmt)
@@ -111,6 +111,7 @@ def update_one_food(id):
     if food:
         food.name = data.get('name') or food.name
         food.price = data.get('price') or food.price
+        ## Because get() method return none if there's no input, give a condition to check the input
         food.is_gf = data.get('is_gf') if request.json.get('is_gf') is not None else food.is_gf
         food.is_df = data.get('is_df') if request.json.get('is_df') is not None else food.is_df
         food.is_v = data.get('is_v') if request.json.get('is_v') is not None else food.is_v

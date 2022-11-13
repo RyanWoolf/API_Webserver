@@ -11,5 +11,6 @@ class Food(db.Model):
     is_df = db.Column(db.Boolean, default=False)
     is_v = db.Column(db.Boolean, default=False)
     
+    # For associated table connection
     orders = relationship('Order', secondary='order_food', viewonly=True)
     

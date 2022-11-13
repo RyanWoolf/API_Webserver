@@ -7,6 +7,7 @@ class Payment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     method = db.Column(db.String(), nullable=False, unique=True)
     
+    # FK area
     receipt = db.relationship('Receipt', back_populates='payments', uselist=False, cascade='all, delete')
 
     

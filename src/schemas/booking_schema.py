@@ -9,6 +9,8 @@ class BookingSchema(ma.Schema):
     
     pax = fields.Integer(validate=(
         Range(1,8, error='It\'s over max 8 pax. Please contact the manager for group booking')))
+    # The maximum table seats is also 8.
+    
     date = fields.Date()
     time = fields.Time('%H:%M')
     customer_id = fields.Integer()
